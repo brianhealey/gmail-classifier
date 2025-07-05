@@ -224,7 +224,7 @@ class GmailManager:
 
         self.labels = existing_labels
 
-    def get_recent_emails(self, hours_back: int = 24, max_results: int = 100) -> List[Dict]:
+    def get_recent_emails(self, hours_back: int = 24, max_results: int = 1000) -> List[Dict]:
         """Get recent emails from Gmail"""
 
         # Calculate date filter
@@ -407,6 +407,17 @@ class EmailDatabase:
         conn.commit()
         conn.close()
 
+    def is_email_processed(self, email_id: str) -> bool:
+        """Check if an email has already been processed"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT 1 FROM email_scores WHERE email_id = ?', (email_id,))
+        result = cursor.fetchone()
+        conn.close()
+
+        return result is not None
+
     def get_last_processed_time(self) -> Optional[datetime]:
         """Get timestamp of last processed email"""
         conn = sqlite3.connect(self.db_path)
@@ -466,9 +477,11 @@ class EmailDatabase:
 
 class EmailScoringSystem:
     def __init__(self):
+        from config import SKIP_PROCESSED_EMAILS
         self.scorer = EmailScorer()
         self.gmail = GmailManager()
         self.db = EmailDatabase()
+        self.skip_processed_emails = SKIP_PROCESSED_EMAILS
 
     def process_emails(self, hours_back: int = 1):
         """Main processing function"""
@@ -482,9 +495,16 @@ class EmailScoringSystem:
             return
 
         processed_count = 0
+        skipped_count = 0
 
         for email in emails:
             try:
+                # Check if email has already been processed
+                if self.skip_processed_emails and self.db.is_email_processed(email['id']):
+                    logger.info(f"Skipping already processed email: {email['subject'][:50]}...")
+                    skipped_count += 1
+                    continue
+
                 # Score the email
                 score = self.scorer.score_email(
                     sender=email['sender'],
@@ -514,7 +534,7 @@ class EmailScoringSystem:
                 continue
 
         self.db.update_last_processed_time(datetime.now())
-        logger.info(f"Successfully processed {processed_count} emails")
+        logger.info(f"Successfully processed {processed_count} emails, skipped {skipped_count} already processed emails")
 
     def _apply_scoring_labels(self, email: Dict, score: EmailScore) -> List[str]:
         """Apply appropriate labels based on score"""
@@ -574,6 +594,7 @@ Category Breakdown:
 def main():
     """Main entry point"""
     import argparse
+    from config import SKIP_PROCESSED_EMAILS
 
     parser = argparse.ArgumentParser(description='Gmail Email Scoring System')
     parser.add_argument('--hours', type=int, default=1,
@@ -582,10 +603,17 @@ def main():
                        help='Generate performance report')
     parser.add_argument('--continuous', action='store_true',
                        help='Run continuously (check every 15 minutes)')
+    parser.add_argument('--process-all', action='store_true',
+                       help='Process all emails, including already processed ones')
 
     args = parser.parse_args()
 
     system = EmailScoringSystem()
+
+    # Override skip_processed_emails if --process-all is specified
+    if args.process_all:
+        system.skip_processed_emails = False
+        logger.info("Processing all emails, including already processed ones")
 
     if args.report:
         print(system.generate_report())

@@ -10,6 +10,7 @@ A Python application that automatically scores your Gmail emails for importance 
 - 📊 **Learning System**: Tracks performance and allows for iterative improvement
 - 🔄 **Long-running**: Can run continuously or on schedule
 - 📈 **Analytics**: Built-in performance reporting
+- 🔍 **Efficient Processing**: Skips already processed emails by default, with option to reprocess
 
 ## Quick Start
 
@@ -152,6 +153,12 @@ python main.py --continuous
 python main.py --hours 3
 ```
 
+### Reprocessing Emails
+```bash
+# Process all emails in the time window, including already processed ones
+python main.py --hours 24 --process-all
+```
+
 ## Configuration Options
 
 ### LM Studio Settings
@@ -197,6 +204,21 @@ Modify scoring rules in the prompt or `config.py`:
 - Personal emails: importance 6-8
 - Notifications: importance 3-5
 - Marketing: importance 1-3
+```
+
+### Processing Options
+
+Configure email processing behavior in `config.py`:
+
+```python
+# Skip emails that have already been processed
+SKIP_PROCESSED_EMAILS = True  # Set to False to always reprocess emails
+
+# Hours to look back for emails
+DEFAULT_HOURS_BACK = 1
+
+# Maximum emails to process in one batch
+MAX_EMAILS_PER_BATCH = 100
 ```
 
 ## Database Schema

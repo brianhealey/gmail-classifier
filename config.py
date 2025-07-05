@@ -15,6 +15,7 @@ DATABASE_PATH = "email_scores.db"
 DEFAULT_HOURS_BACK = 1
 CONTINUOUS_CHECK_INTERVAL = 900  # 15 minutes in seconds
 MAX_EMAILS_PER_BATCH = 100
+SKIP_PROCESSED_EMAILS = True  # Skip emails that have already been processed
 
 # Scoring Thresholds (adjust these based on your preferences)
 IMPORTANCE_THRESHOLDS = {
