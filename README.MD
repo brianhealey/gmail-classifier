@@ -82,7 +82,7 @@ The system analyzes each email and provides:
     - 8-10: Very likely spam
     - 0-3: Legitimate email
 
-- **Category**: work, personal, **orders**, newsletter, promotion, spam, notification
+- **Category**: work, personal, **orders**, newsletter, promotion, spam, notification, **travel**, **finance**, **calendar**, **software_license**
 
 ### Gmail Labels Applied
 
@@ -91,7 +91,11 @@ The system creates and applies these labels:
 - 🔴 **EmailScorer/High-Importance** - Important emails (score 8+)
 - 🟡 **EmailScorer/Medium-Importance** - Medium priority (score 5-7)
 - ⚪ **EmailScorer/Low-Importance** - Low priority (score <5)
-- 🔵 **EmailScorer/Orders-Shipping** - Online orders, deliveries, tracking (NEW!)
+- 🔵 **EmailScorer/Orders-Shipping** - Online orders, deliveries, tracking
+- 🟢 **EmailScorer/Travel** - Flight confirmations, hotel bookings, itineraries
+- 🟤 **EmailScorer/Finance** - Banking, payments, invoices, bills, receipts
+- 🟣 **EmailScorer/Calendar-Events** - Meeting invites, event reminders, RSVPs
+- 🔷 **EmailScorer/Software-License** - Software activation keys, digital licenses
 - 🚫 **EmailScorer/Likely-Spam** - Probable spam (spam score 7+)
 - ❓ **EmailScorer/Needs-Review** - Low confidence scores
 
@@ -126,6 +130,106 @@ The system automatically detects and labels order-related emails with a dedicate
 - "UPS tracking update for package 1Z..."
 - "Best Buy order confirmation #12345"
 - "Your package will arrive today"
+
+### ✈️ Travel Detection
+
+The system identifies and labels travel-related emails with a dedicated green label:
+
+**What gets classified as "travel":**
+- Flight confirmations and boarding passes
+- Hotel reservations and check-in information
+- Rental car bookings and confirmations
+- Travel itineraries and trip summaries
+- Airline status updates and gate changes
+- Tour and activity bookings
+- Travel insurance documents
+
+**Why this matters:**
+- Keep all your travel documents in one place
+- Quickly find important booking information
+- High importance (7-9) - critical for travel planning
+- Separate from marketing emails from the same travel companies
+
+**Example emails that get the Travel label:**
+- "Your flight confirmation for NYC to LAX"
+- "Hotel reservation confirmation #12345"
+- "Your boarding pass is ready"
+- "Important information about your upcoming trip"
+
+### 💰 Finance Detection
+
+The system identifies and labels finance-related emails with a dedicated brown label:
+
+**What gets classified as "finance":**
+- Bank statements and account notifications
+- Payment confirmations and receipts
+- Credit card statements and alerts
+- Invoice and bill notifications
+- Tax documents and filing confirmations
+- Investment updates and portfolio summaries
+- Payroll and salary information
+
+**Why this matters:**
+- Keep track of your financial communications
+- Quickly find important payment information
+- High importance (7-9) - critical for financial management
+- Easily distinguish from marketing emails from the same financial institutions
+
+**Example emails that get the Finance label:**
+- "Your monthly bank statement is ready"
+- "Payment confirmation for your utility bill"
+- "Important tax document available"
+- "Transaction alert: $500 withdrawal"
+
+### 📅 Calendar & Events Detection
+
+The system identifies and labels calendar and event-related emails with a dedicated purple-blue label:
+
+**What gets classified as "calendar":**
+- Meeting invites and calendar appointments
+- Event RSVPs and ticket confirmations
+- Appointment reminders and scheduling updates
+- Webinar and conference registrations
+- Class and course schedules
+- Deadline notifications and time-sensitive reminders
+
+**Why this matters:**
+- Never miss an important meeting or event
+- Quickly identify schedule changes
+- Medium-high importance (6-8) - important for planning
+- Separate from other notifications and updates
+
+**Example emails that get the Calendar-Events label:**
+- "Meeting invitation: Project Review"
+- "Your appointment is confirmed for tomorrow"
+- "RSVP: Company Holiday Party"
+- "Reminder: Webinar starts in 1 hour"
+
+### 🔑 Software License Detection
+
+The system identifies and labels software license-related emails with a dedicated teal label:
+
+**What gets classified as "software_license":**
+- Software activation keys and registration codes
+- Digital license certificates and product keys
+- Software purchase confirmations with license information
+- License renewal notices and expiration warnings
+- Software registration confirmations
+- Digital product delivery emails with access credentials
+
+**Why this matters:**
+- Keep all your software licenses in one place
+- Easily find activation keys when reinstalling software
+- High importance (7-9) - critical for software access
+- Prevent license loss that could require repurchase
+- Quickly identify when licenses need renewal
+
+**Example emails that get the Software-License label:**
+- "Your Adobe Creative Cloud license key"
+- "Microsoft Office 365 activation information"
+- "Your software purchase: Download and license key"
+- "License renewal reminder: Your subscription expires in 30 days"
+- "Your game key for Steam: XXXX-XXXX-XXXX"
 
 ## Usage Examples
 

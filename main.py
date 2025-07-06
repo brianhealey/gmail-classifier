@@ -54,15 +54,24 @@ CONTENT: {body_preview}
 Rules:
 - Work emails: importance 7-9
 - Orders/shipping/deliveries: importance 6-7
+- Travel emails (flights, hotels, itineraries): importance 7-9
+- Finance emails (banking, payments, invoices): importance 7-9
+- Calendar/Events (meetings, invites, RSVPs): importance 6-8
+- Software License emails (activation keys, digital licenses): importance 7-9
 - Personal emails: importance 6-8
 - Notifications: importance 3-5
 - Marketing/newsletters: importance 1-3
 - Unknown/suspicious senders: higher spam score
 
-Orders category includes: Amazon, retailers, shipping companies (UPS/FedEx/USPS), order confirmations, delivery updates, tracking info.
+Category descriptions:
+- Orders: Amazon, retailers, shipping companies (UPS/FedEx/USPS), order confirmations, delivery updates, tracking info
+- Travel: Flight confirmations, hotel bookings, rental cars, travel itineraries, boarding passes, trip updates
+- Finance: Bank statements, payment confirmations, invoices, bills, receipts, tax documents, financial alerts
+- Calendar: Meeting invites, event reminders, RSVPs, appointment confirmations, schedule updates
+- Software License: Software activation keys, digital license certificates, product keys, registration confirmations, license renewal notices
 
 Output this exact JSON format:
-{{"importance_score": [0-10], "spam_score": [0-10], "category": "[work/personal/orders/newsletter/promotion/spam/notification]", "reasoning": "[brief]", "confidence": [0.0-1.0]}}"""
+{{"importance_score": [0-10], "spam_score": [0-10], "category": "[work/personal/orders/newsletter/promotion/spam/notification/travel/finance/calendar/software_license]", "reasoning": "[brief]", "confidence": [0.0-1.0]}}"""
 
         try:
             response = self.client.chat.completions.create(
@@ -191,6 +200,10 @@ class GmailManager:
             'EmailScorer/Medium-Importance': '#f2c960',  # Yellow
             'EmailScorer/Low-Importance': '#cccccc',     # Gray
             'EmailScorer/Orders-Shipping': '#4a86e8',    # Blue
+            'EmailScorer/Travel': '#16a766',             # Green
+            'EmailScorer/Finance': '#ffad47',            # Brown
+            'EmailScorer/Calendar-Events': '#8e63ce',    # Purple-Blue
+            'EmailScorer/Software-License': '#e66550',   # Teal
             'EmailScorer/Likely-Spam': '#ffad47',        # Orange
             'EmailScorer/Needs-Review': '#8e63ce',       # Purple
             'EmailScorer/Training-Data/Correct': '#16a766',   # Green
@@ -224,8 +237,16 @@ class GmailManager:
 
         self.labels = existing_labels
 
-    def get_recent_emails(self, hours_back: int = 24, max_results: int = 1000) -> List[Dict]:
-        """Get recent emails from Gmail"""
+    def get_recent_emails(self, hours_back: int = 24, process_batch_callback=None) -> List[Dict]:
+        """Get recent emails from Gmail using batching and process each batch immediately
+
+        Args:
+            hours_back: Number of hours to look back for emails
+            process_batch_callback: Callback function to process each batch of emails
+                                   If provided, emails are processed in batches and not returned
+                                   If None, all emails are collected and returned (legacy behavior)
+        """
+        from config import MAX_EMAILS_PER_BATCH
 
         # Calculate date filter
         since_date = datetime.now() - timedelta(hours=hours_back)
@@ -234,22 +255,66 @@ class GmailManager:
         query = f'after:{date_str} -in:chats'
 
         try:
-            results = self.service.users().messages().list(
-                userId='me', q=query, maxResults=max_results).execute()
-            messages = results.get('messages', [])
+            emails = [] if process_batch_callback is None else None
+            page_token = None
+            total_messages = 0
+            batch_count = 0
+            total_processed = 0
+            total_skipped = 0
 
-            emails = []
-            for msg in messages:
-                try:
-                    email_data = self._get_email_details(msg['id'])
-                    if email_data:
-                        emails.append(email_data)
-                except Exception as e:
-                    logger.error(f"Error processing email {msg['id']}: {e}")
-                    continue
+            # Retrieve emails in batches using pageToken
+            while True:
+                batch_count += 1
+                # Request a batch of messages
+                request = self.service.users().messages().list(
+                    userId='me', 
+                    q=query, 
+                    maxResults=MAX_EMAILS_PER_BATCH,
+                    pageToken=page_token
+                )
+                results = request.execute()
+                messages = results.get('messages', [])
+                total_messages += len(messages)
 
-            logger.info(f"Retrieved {len(emails)} emails from last {hours_back} hours")
-            return emails
+                if not messages:
+                    break
+
+                # Process this batch of messages
+                logger.info(f"Retrieving batch {batch_count} with {len(messages)} messages")
+                batch_emails = []
+
+                for msg in messages:
+                    try:
+                        email_data = self._get_email_details(msg['id'])
+                        if email_data:
+                            if process_batch_callback:
+                                batch_emails.append(email_data)
+                            else:
+                                emails.append(email_data)
+                    except Exception as e:
+                        logger.error(f"Error retrieving email {msg['id']}: {e}")
+                        continue
+
+                # If callback is provided, process this batch immediately
+                if process_batch_callback and batch_emails:
+                    processed, skipped = process_batch_callback(batch_emails)
+                    total_processed += processed
+                    total_skipped += skipped
+                    logger.info(f"Processed batch {batch_count}: {processed} emails processed, {skipped} skipped")
+
+                # Check if there are more messages to retrieve
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
+
+            if process_batch_callback:
+                logger.info(f"Completed processing {total_messages} messages in {batch_count} batches from last {hours_back} hours")
+                logger.info(f"Total: {total_processed} emails processed, {total_skipped} skipped")
+                return []  # Return empty list when using callback
+            else:
+                # Legacy behavior - return all emails
+                logger.info(f"Retrieved {len(emails)} emails from {total_messages} messages in {batch_count} batches from last {hours_back} hours")
+                return emails
 
         except Exception as e:
             logger.error(f"Error retrieving emails: {e}")
@@ -483,17 +548,15 @@ class EmailScoringSystem:
         self.db = EmailDatabase()
         self.skip_processed_emails = SKIP_PROCESSED_EMAILS
 
-    def process_emails(self, hours_back: int = 1):
-        """Main processing function"""
-        logger.info(f"Starting email processing for last {hours_back} hours")
+    def process_batch(self, emails: List[Dict]) -> tuple:
+        """Process a batch of emails
 
-        # Get recent emails
-        emails = self.gmail.get_recent_emails(hours_back=hours_back)
+        Args:
+            emails: List of email dictionaries to process
 
-        if not emails:
-            logger.info("No new emails to process")
-            return
-
+        Returns:
+            tuple: (processed_count, skipped_count)
+        """
         processed_count = 0
         skipped_count = 0
 
@@ -501,7 +564,7 @@ class EmailScoringSystem:
             try:
                 # Check if email has already been processed
                 if self.skip_processed_emails and self.db.is_email_processed(email['id']):
-                    logger.info(f"Skipping already processed email: {email['subject'][:50]}...")
+                    logger.debug(f"Skipping already processed email: {email['subject'][:50]}...")
                     skipped_count += 1
                     continue
 
@@ -533,8 +596,20 @@ class EmailScoringSystem:
                 logger.error(f"Error processing email {email['id']}: {e}")
                 continue
 
-        self.db.update_last_processed_time(datetime.now())
-        logger.info(f"Successfully processed {processed_count} emails, skipped {skipped_count} already processed emails")
+        return processed_count, skipped_count
+
+    def process_emails(self, hours_back: int = 1):
+        """Main processing function"""
+        logger.info(f"Starting email processing for last {hours_back} hours")
+
+        # Update last processed time at the start
+        start_time = datetime.now()
+
+        # Process emails in batches
+        self.gmail.get_recent_emails(hours_back=hours_back, process_batch_callback=self.process_batch)
+
+        # Update last processed time after all batches are done
+        self.db.update_last_processed_time(start_time)
 
     def _apply_scoring_labels(self, email: Dict, score: EmailScore) -> List[str]:
         """Apply appropriate labels based on score"""
@@ -544,6 +619,18 @@ class EmailScoringSystem:
         if score.category == 'orders':
             if self.gmail.apply_label(email['id'], 'EmailScorer/Orders-Shipping'):
                 labels_applied.append('EmailScorer/Orders-Shipping')
+        elif score.category == 'travel':
+            if self.gmail.apply_label(email['id'], 'EmailScorer/Travel'):
+                labels_applied.append('EmailScorer/Travel')
+        elif score.category == 'finance':
+            if self.gmail.apply_label(email['id'], 'EmailScorer/Finance'):
+                labels_applied.append('EmailScorer/Finance')
+        elif score.category == 'calendar':
+            if self.gmail.apply_label(email['id'], 'EmailScorer/Calendar-Events'):
+                labels_applied.append('EmailScorer/Calendar-Events')
+        elif score.category == 'software_license':
+            if self.gmail.apply_label(email['id'], 'EmailScorer/Software-License'):
+                labels_applied.append('EmailScorer/Software-License')
 
         # Importance labels
         if score.importance_score >= 8:

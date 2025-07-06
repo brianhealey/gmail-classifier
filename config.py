@@ -33,6 +33,10 @@ LABELS = {
     'medium_importance': 'EmailScorer/Medium-Importance',
     'low_importance': 'EmailScorer/Low-Importance',
     'orders_shipping': 'EmailScorer/Orders-Shipping',
+    'travel': 'EmailScorer/Travel',
+    'finance': 'EmailScorer/Finance',
+    'calendar_events': 'EmailScorer/Calendar-Events',
+    'software_license': 'EmailScorer/Software-License',
     'likely_spam': 'EmailScorer/Likely-Spam',
     'needs_review': 'EmailScorer/Needs-Review',
     'training_correct': 'EmailScorer/Training-Data/Correct',
@@ -45,6 +49,10 @@ LABEL_COLORS = {
     'EmailScorer/Medium-Importance': '#f2c960',  # Yellow
     'EmailScorer/Low-Importance': '#cccccc',     # Gray
     'EmailScorer/Orders-Shipping': '#4a86e8',    # Blue
+    'EmailScorer/Travel': '#16a766',             # Green
+    'EmailScorer/Finance': '#ffad47',            # Brown
+    'EmailScorer/Calendar-Events': '#8e63ce',    # Purple-Blue
+    'EmailScorer/Software-License': '#e66550',   # Teal
     'EmailScorer/Likely-Spam': '#ffad47',        # Orange
     'EmailScorer/Needs-Review': '#8e63ce',       # Purple
     'EmailScorer/Training-Data/Correct': '#16a766',   # Green
@@ -76,7 +84,7 @@ Provide scores as JSON:
 {{
     "importance_score": 0-10,
     "spam_score": 0-10,
-    "category": "work|personal|orders|newsletter|promotion|spam|notification",
+    "category": "work|personal|orders|newsletter|promotion|spam|notification|travel|finance|calendar|software_license",
     "reasoning": "brief explanation",
     "confidence": 0.0-1.0
 }}
@@ -84,11 +92,22 @@ Provide scores as JSON:
 Scoring Guidelines:
 - Work emails from colleagues/clients = 7-9 importance
 - Orders/shipping/deliveries = 6-7 importance (Amazon, retailers, UPS/FedEx/USPS, tracking)
+- Travel emails (flights, hotels, itineraries) = 7-9 importance
+- Finance emails (banking, payments, invoices) = 7-9 importance
+- Calendar/Events (meetings, invites, RSVPs) = 6-8 importance
+- Software License emails (activation keys, digital licenses) = 7-9 importance
 - Personal emails from friends/family = 6-8 importance
 - Automated notifications = 3-5 importance
 - Newsletters/promotions = 1-3 importance
 - Suspicious/unknown senders = higher spam score
 - Professional tone + known sender = higher confidence
+
+Category descriptions:
+- Orders: Amazon, retailers, shipping companies, order confirmations, delivery updates, tracking info
+- Travel: Flight confirmations, hotel bookings, rental cars, travel itineraries, boarding passes, trip updates
+- Finance: Bank statements, payment confirmations, invoices, bills, receipts, tax documents, financial alerts
+- Calendar: Meeting invites, event reminders, RSVPs, appointment confirmations, schedule updates
+- Software License: Software activation keys, digital license certificates, product keys, registration confirmations, license renewal notices
 
 JSON:"""
 
